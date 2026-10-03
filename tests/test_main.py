@@ -1,0 +1,41 @@
+import pytest
+from fastapi.testclient import TestClient
+from app.main import app
+
+client = TestClient(app)
+
+def test_health_check():
+    """Test the health check endpoint returns 200 OK and correct status."""
+    response = client.get("/health")
+    assert response.status_code == 200
+    data = response.json()
+    assert "status" in data
+    assert data["status"] == "healthy"  # Matches your app's actual health response
+
+def test_predict_transaction_endpoint():
+    """Test the real-time ML prediction endpoint with a valid transaction payload."""
+    payload = {
+        "step": 150,
+        "type": "TRANSFER",
+        "amount": 250000.0,
+        "oldbalanceOrg": 250000.0,
+        "newbalanceOrig": 0.0,
+        "oldbalanceDest": 0.0,
+        "newbalanceDest": 250000.0
+    }
+    
+    response = client.post("/predictions/score", json=payload)
+    assert response.status_code == 200
+    
+    data = response.json()
+    # Verify core enterprise response schema keys
+    assert "transaction_id" in data
+    assert "fraud_probability" in data
+    assert "risk_category" in data
+    assert "model_version" in data
+    assert "top_risk_factors" in data
+    
+    # Verify value types and ranges
+    assert 0.0 <= data["fraud_probability"] <= 1.0
+    assert data["risk_category"] in ["LOW", "MEDIUM", "HIGH"]
+    assert isinstance(data["top_risk_factors"], list)
