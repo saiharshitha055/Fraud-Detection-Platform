@@ -1,6 +1,13 @@
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
+from app.core.database import Base, engine
+
+@pytest.fixture(autouse=True)
+def setup_database():
+    """Ensure database tables are created before running tests."""
+    Base.metadata.create_all(bind=engine)
+    yield
 
 client = TestClient(app)
 
