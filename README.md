@@ -46,7 +46,7 @@ Fraud-Detection-Platform/
 ## Local Installation and Setup
 
 1. Clone the Repository:
-   git clone https://github.com/KVSH25/Fraud-Detection-Platform.git
+   git clone https://github.com/saiharshitha055/Fraud-Detection-Platform.git
    cd Fraud-Detection-Platform
 
 2. Create and Activate Virtual Environment:
