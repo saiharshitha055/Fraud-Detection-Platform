@@ -1,26 +1,56 @@
 version: '3.8'
 
 services:
+  # PostgreSQL Database Service
+  db:
+    image: postgres:15-alpine
+    container_name: fraud_postgres_db
+    restart: always
+    environment:
+      POSTGRES_USER: fraud_user
+      POSTGRES_PASSWORD: secure_password123
+      POSTGRES_DB: fraud_detection_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U fraud_user -d fraud_detection_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # FastAPI Backend Service
   backend:
-    build:
-      context: .
-      dockerfile: Dockerfile
+    build: .
+    container_name: fraud_fastapi_backend
+    restart: always
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     ports:
       - "8000:8000"
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://fraud_user:secure_password123@db:5432/fraud_detection_db
+    depends_on:
+      db:
+        condition: service_healthy
     volumes:
       - .:/app
-    environment:
-      - PYTHONUNBUFFERED=1
 
-  frontend:
+  # Streamlit Frontend Service
+  streamlit:
     build:
       context: .
       dockerfile: Dockerfile.streamlit
+    container_name: fraud_streamlit_frontend
+    restart: always
+    command: streamlit run streamlit_app/app.py --server.port=8501 --server.address=0.0.0.0
     ports:
       - "8501:8501"
-    volumes:
-      - .:/app
+    environment:
+      - API_URL=http://backend:8000
     depends_on:
       - backend
-    environment:
-      - PYTHONUNBUFFERED=1
+      - db
+
+volumes:
+  postgres_data:

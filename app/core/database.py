@@ -1,24 +1,44 @@
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
+from sqlalchemy.orm import declarative_base
 
-# Database URL: Using local SQLite for smooth development, easily switchable to PostgreSQL URI later
-# e.g., "postgresql://username:password@localhost:5432/fraud_db"
-SQLALCHEMY_DATABASE_URL = "sqlite:///./fraud_platform.db"
-
-engine = create_engine(
-    SQLALCHEMY_DATABASE_URL, connect_args={"check_same_thread": False} if "sqlite" in SQLALCHEMY_DATABASE_URL else {}
+# Fallback to local SQLite async URL if DATABASE_URL environment variable isn't set yet
+DATABASE_URL = os.getenv(
+    "DATABASE_URL", 
+    "sqlite+aiosqlite:///./fraud_platform.db"
 )
 
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+# If PostgreSQL URL is provided via environment, ensure it uses the asyncpg driver prefix
+if DATABASE_URL.startswith("postgres://"):
+    DATABASE_URL = DATABASE_URL.replace("postgres://", "postgresql+asyncpg://", 1)
+elif DATABASE_URL.startswith("postgresql://") and "+asyncpg" not in DATABASE_URL:
+    DATABASE_URL = DATABASE_URL.replace("postgresql://", "postgresql+asyncpg://", 1)
 
+# Create the async SQLAlchemy engine
+engine = create_async_engine(DATABASE_URL, echo=True, future=True)
+
+# Create a configured "AsyncSession" class
+AsyncSessionLocal = async_sessionmaker(
+    bind=engine,
+    class_=AsyncSession,
+    expire_on_commit=False,
+)
+
+# Base class for your database models
 Base = declarative_base()
 
-# Dependency to get DB session in FastAPI endpoints
-def get_db():
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+# Dependency for FastAPI endpoints to get async database sessions
+async def get_db():
+    async with AsyncSessionLocal() as session:
+        try:
+            yield session
+            await session.commit()
+        except Exception:
+            await session.rollback()
+            raise
+        finally:
+            await session.close()
+# Function to create tables asynchronously
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)

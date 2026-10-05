@@ -6,7 +6,7 @@ import numpy as np
 
 st.set_page_config(page_title="Temporal Fraud Trends", page_icon="📈", layout="wide")
 
-st.title("📈 Temporal Fraud Trends & Time-Series Analysis")
+st.title("Temporal Fraud Trends & Time-Series Analysis")
 st.markdown("Explore behavioral patterns, risk escalation across simulation hours, and portfolio distributions.")
 st.markdown("---")
 

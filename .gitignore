@@ -1,20 +1,6 @@
-# Python virtual environment
-venv/
-env/
-ENV/
-
-# Python cache and compiled files
-__pycache__/
-*.py[cod]
-*$py.class
-
-# Databases and local logs
-*.db
+# Large Data & ML Artifacts
+ml/data/
 mlruns/
-*.sqlite3
-
-# VS Code editor settings
-.vscode/
-# Large datasets and raw data files
-ml/data/raw/
 *.csv
+*.db
+venv/
