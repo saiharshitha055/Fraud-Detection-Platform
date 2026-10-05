@@ -6,7 +6,7 @@ import sqlite3
 import numpy as np
 import os
 
-API_BASE_URL = os.getenv("API_URL", "http://127.0.0.1:8000")
+API_BASE_URL = os.getenv("API_URL", "https://fraud-detection-platform-production-d699.up.railway.app/")
 
 st.set_page_config(
     page_title="Executive Fraud Analytics Dashboard",
