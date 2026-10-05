@@ -1,3 +1,4 @@
+import asyncio
 import pytest
 from fastapi.testclient import TestClient
 from app.main import app
@@ -5,11 +6,19 @@ from app.core.database import Base, engine
 
 @pytest.fixture(autouse=True)
 def setup_database():
-    """Ensure database tables are created synchronously before running tests."""
-    sync_eng = getattr(engine, "sync_engine", engine)
-    Base.metadata.create_all(bind=sync_eng)
+    """Ensure database tables are created asynchronously using asyncio.run before tests."""
+    async def init_db():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+            
+    async def drop_db():
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.drop_all)
+
+    # Safely run async DDL operations inside sync fixture
+    asyncio.run(init_db())
     yield
-    Base.metadata.drop_all(bind=sync_eng)
+    asyncio.run(drop_db())
 
 client = TestClient(app)
 
