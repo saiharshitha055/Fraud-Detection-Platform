@@ -5,8 +5,10 @@ from app.core.database import Base, engine
 
 @pytest.fixture(autouse=True)
 def setup_database():
-    """Ensure database tables are created before running tests."""
-    Base.metadata.create_all(bind=engine)
+    """Ensure database tables are created synchronously before running tests."""
+    # Use sync_engine if it's an AsyncEngine, otherwise use engine directly
+    sync_eng = getattr(engine, "sync_engine", engine)
+    Base.metadata.create_all(bind=sync_eng)
     yield
 
 client = TestClient(app)
@@ -17,7 +19,7 @@ def test_health_check():
     assert response.status_code == 200
     data = response.json()
     assert "status" in data
-    assert data["status"] == "healthy"  # Matches your app's actual health response
+    assert data["status"] == "healthy"
 
 def test_predict_transaction_endpoint():
     """Test the real-time ML prediction endpoint with a valid transaction payload."""
@@ -35,14 +37,12 @@ def test_predict_transaction_endpoint():
     assert response.status_code == 200
     
     data = response.json()
-    # Verify core enterprise response schema keys
     assert "transaction_id" in data
     assert "fraud_probability" in data
     assert "risk_category" in data
     assert "model_version" in data
     assert "top_risk_factors" in data
     
-    # Verify value types and ranges
     assert 0.0 <= data["fraud_probability"] <= 1.0
     assert data["risk_category"] in ["LOW", "MEDIUM", "HIGH"]
     assert isinstance(data["top_risk_factors"], list)
